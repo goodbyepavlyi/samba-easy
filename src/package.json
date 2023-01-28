@@ -1,0 +1,31 @@
+{
+  "release": 1,
+  "name": "samba-easy",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+    "serve": "DEBUG=Config,Server,Samba,Util nodemon server.js",
+    "serve-with-password": "PASSWORD=samba-easy npm run serve",
+    "lint": "eslint ."
+  },
+  "author": "goodbyepavlyi",
+  "license": "GPL",
+  "dependencies": {
+    "debug": "^4.3.1",
+    "express": "^4.17.1",
+    "express-session": "^1.17.1",
+    "uuid": "^8.3.2"
+  },
+  "devDependencies": {
+    "eslint": "^7.27.0",
+    "eslint-config-athom": "^2.1.0",
+    "nodemon": "^2.0.20",
+    "tailwindcss": "^3.2.4"
+  },
+  "nodemonConfig": {
+    "ignore": [
+      "www/*"
+    ]
+  }
+}

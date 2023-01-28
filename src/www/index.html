@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Samba</title>
+
+  <link rel="manifest" href="./manifest.json">
+
+  <link rel="icon" type="image/png" href="./img/favicon.png">
+  <link rel="apple-touch-icon" href="./img/apple-touch-icon.png">
+
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+
+  <link href="./css/vendor/fontawesome.min.css" rel="stylesheet">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+    }
+
+    if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches))
+      document.documentElement.classList.add('dark')
+    else
+      document.documentElement.classList.remove('dark')
+  </script>
+
+  <style>
+    [v-cloak] {
+      display: none;
+    }
+  </style>
+</head>
+
+<body class="bg-gray-100 dark:bg-neutral-800">
+  <div id="app">
+    <!-- Theme Switcher -->
+    <div class="flex justify-end">
+      <button v-cloak id="theme-toggle" @click="toggleTheme"
+        class="text-gray-500 dark:text-neutral-200 bg-gray-200 dark:bg-neutral-700 hover:bg-gray-300 dark:hover:bg-neutral-600 mt-5 mr-5 focus:outline-none rounded-lg text-sm p-2.5 transition">
+        <!-- Dark Icon -->
+        <i id="theme-toggle-dark-icon" class="fa-solid fa-moon w-5 h-5" :class="{ hidden: isDark }"></i>
+        <!-- Light Icon -->
+        <i id="theme-toggle-light-icon" class="fa-solid fa-sun w-5 h-5" :class="{ hidden: !isDark }"></i>
+      </button>
+    </div>
+
+    <div v-cloak class="container mx-auto max-w-3xl px-5 md:px-0">
+
+      <div v-if="authentication.authenticated === true">
+        <!-- Logout Button -->
+        <span v-if="authentication.requiresPassword" @click="logout"
+          class="text-gray-500 dark:text-neutral-400 hover:text-gray-400 dark:hover:text-neutral-300 text-sm font-bold transition mb-10 mr-2 mt-3 cursor-pointer float-right">
+          Logout
+          <!-- Logout Icon -->
+          <i class="fa-solid fa-right-from-bracket h-3 inline"></i>
+        </span>
+
+        <!-- Logo -->
+        <h1 class="dark:text-neutral-200 text-4xl font-medium mt-2 mb-2">
+          <img src="./img/logo.png" width="40" class="inline align-middle dark:bg-neutral-200 rounded-lg" />
+          <span class="align-middle">Samba</span>
+        </h1>
+
+        <!-- Padding -->
+        <h2 class="mb-10"></h2>
+
+        <!-- Error -->
+        <div v-if="error" class="bg-red-400 dark:bg-red-500 text-white p-4 text-sm font-small mb-10 rounded-md shadow-lg">
+          <div class="container mx-auto flex flex-row flex-auto items-center">
+            <div class="flex-grow">
+              <p class="font-bold">An error has occurred!</p>
+              <p>{{error}}</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Update Notifier -->
+        <div v-if="latestRelease" :title="`v${currentRelease} → v${latestRelease.version}`"
+          class="bg-violet-800 text-white p-4 text-sm font-small mb-10 rounded-md shadow-lg">
+          <div class="container mx-auto flex flex-row flex-auto items-center">
+            <div class="flex-grow">
+              <p class="font-bold">There is an update available!</p>
+              <p>{{latestRelease.changelog}}</p>
+            </div>
+
+            <a href="https://github.com/goodbyepavlyi/samba-easy#updating" target="_blank"
+              class="bg-white text-violet-800 hover:text-gray-600 hover:bg-gray-100 p-3 rounded-md float-right font-sm font-semibold flex-shrink-0 transition-all">
+              Update
+              <i class="fa-solid fa-right"></i>
+            </a>
+          </div>
+        </div>
+
+        <!-- Header -->
+        <div class="bg-white dark:bg-neutral-700 shadow-md rounded-lg overflow-hidden">
+          <div class="border-gray-100 dark:border-neutral-600 flex flex-row flex-auto items-center p-3 px-5 border-b-2">
+            <!-- Title -->
+            <div class="flex-grow">
+              <!-- Button - Clients -->
+              <button @click="changePage('clients');"
+                class=" hover:bg-violet-700 text-white border-2 border-none py-2 px-4 rounded inline-flex items-center transition"
+                :class="[ page == 'clients' ? 'bg-violet-800 hover:bg-violet-700' : 'bg-gray-500 dark:bg-neutral-500 hover:bg-gray-400 dark:hover:bg-neutral-600']">
+                <i class="fa-solid fa-user w-4 mr-2"></i>
+                <span class="text-sm font-bold">Clients</span>
+              </button>
+
+              <!-- Button - Shares -->
+              <button @click="changePage('shares');"
+                class=" hover:bg-violet-700 text-white border-2 border-none py-2 px-4 rounded inline-flex items-center transition"
+                :class="[ page == 'shares' ? 'bg-violet-800 hover:bg-violet-700' : 'bg-gray-500 dark:bg-neutral-500 hover:bg-gray-400 dark:hover:bg-neutral-600']">
+                <i class="fa-solid fa-hard-drive w-4 mr-2"></i>
+                <span class="text-sm font-bold">Shares</span>
+              </button>
+            </div>
+
+            <!-- New Button -->
+            <div class="flex-shrink-0">
+              <button @click="[page == 'clients' ? openClientPopUp() : openSharePopUp()]"
+                class="hover:bg-gray-50 hover:border-gray-200 dark:hover:bg-neutral-600 dark:hover:border-neutral-500 text-gray-700 dark:text-neutral-200 border-2 border-gray-100 dark:border-neutral-600 py-2 px-4 rounded inline-flex items-center transition">
+                <i class="fa-solid fa-plus w-4 mr-2"></i>
+                <span class="text-sm">New</span>
+              </button>
+            </div>
+          </div>
+
+          <div v-if="page === 'clients'">
+            <!-- Client List -->
+            <div v-if="clients && clients.length > 0" v-for="client in clients" :key="client.id"
+              class="border-gray-100 dark:border-neutral-600 relative overflow-hidden border-b last:border-b-0 border-solid">
+          
+              <div class="relative p-5 z-10 flex flex-col md:flex-row justify-between">
+                <div class="flex items-center pb-2 md:pb-0">
+                  <!-- Avatar -->
+                  <div class="bg-gray-100 h-10 w-10 mr-5 rounded-full flex justify-center items-center">
+                    <i class="fa-solid fa-user fa-lg text-gray-400"></i>
+                  </div>
+          
+                  <div class="flex-grow">
+                    <!-- Name -->
+                    <span :title="'Created on ' + dateTime(new Date(client.createdAt))"
+                      class="text-gray-700 dark:text-neutral-200">{{client.name}}</span>
+                  </div>
+                </div>
+          
+                <!-- Controls -->
+                <div class="flex items-center justify-end">
+                  <div class="text-gray-400 dark:text-neutral-400 flex gap-1 items-center justify-between">
+          
+                    <!-- Enable/Disable -->
+                    <div @click="disableClient(client);" v-if="client.enabled === true" title="Disable Client"
+                      class="bg-green-600 cursor-pointer hover:bg-green-500 inline-block align-middle rounded-full w-10 h-6 mr-1 transition-all">
+                      <div class="bg-white rounded-full w-4 h-4 m-1 ml-5"></div>
+                    </div>
+                    <div @click="enableClient(client);" v-if="client.enabled === false" title="Enable Client"
+                      class="bg-gray-200 dark:bg-neutral-400 hover:bg-gray-300 dark:hover:bg-neutral-500 inline-block align-middle rounded-full w-10 h-6 mr-1 cursor-pointer transition-all">
+                      <div class="bg-white rounded-full w-4 h-4 m-1"></div>
+                    </div>
+          
+                    <!-- Edit -->
+                    <button title="Edit" @click="openClientPopUp(client);"
+                      class="bg-gray-100 dark:bg-neutral-600 text-gray-400 dark:text-neutral-300 hover:bg-gray-200 dark:hover:bg-neutral-500 hover:text-neutral-400 dark:hover:text-white align-middle p-2 rounded transition">
+                      <i class="fa-solid fa-pencil fa-fw"></i>
+                    </button>
+          
+                    <!-- Delete -->
+                    <button
+                      class="bg-gray-100 dark:bg-neutral-600 text-gray-400 dark:text-neutral-300 hover:bg-gray-200 dark:hover:bg-neutral-500 hover:text-neutral-400 dark:hover:text-white align-middle p-2 rounded transition"
+                      title="Delete Client" @click="openClientDeletePopUp(client);">
+                      <i class="fa-solid fa-trash fa-fw"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          
+            <!-- No Clients -->
+            <div v-if="clients && clients.length === 0">
+              <p class="text-gray-400 dark:text-neutral-400 text-center m-10 text-sm">
+                There are no clients yet.<br /><br />
+                <button @click="openClientPopUp();"
+                  class="bg-violet-800 hover:bg-violet-700 text-white border-2 border-none py-2 px-4 rounded inline-flex items-center transition">
+                  <i class="fa-solid fa-plus w-4 mr-2"></i>
+                  <span class="text-sm">New Client</span>
+                </button>
+              </p>
+            </div>
+          
+            <div v-if="clients === null" class="text-violet-500 pt-24 pb-12 flex">
+              <i class="fa-duotone fa-spinner animate-spin mx-auto"></i>
+            </div>
+          </div>
+
+          <div v-if="page === 'shares'">
+            <!-- Share List -->
+            <div v-if="shares && shares.length > 0" v-for="share in shares" :key="share.id"
+              class="border-gray-100 dark:border-neutral-600 relative overflow-hidden border-b last:border-b-0 border-solid">
+
+              <div class="relative p-5 z-10 flex flex-col md:flex-row justify-between">
+                <div class="flex items-center pb-2 md:pb-0">
+                  <!-- Avatar -->
+                  <div class="bg-gray-100 h-10 w-10 mr-5 rounded-full flex justify-center items-center">
+                    <i class="fa-solid fa-hard-drive fa-lg text-gray-400"></i>
+                  </div>
+
+                  <div class="flex-grow">
+                    <!-- Name -->
+                    <span :title="'Created on ' + dateTime(new Date(share.createdAt))"
+                    class="text-gray-700 dark:text-neutral-200">{{share.name}}</span>
+                  </div>
+                </div>
+
+                <!-- Controls -->
+                <div class="flex items-center justify-end">
+                  <div class="text-gray-400 dark:text-neutral-400 flex gap-1 items-center justify-between">
+
+                    <!-- Enable/Disable -->
+                    <div @click="disableShare(share);" v-if="share.enabled === true" title="Disable share"
+                      class="bg-green-600 cursor-pointer hover:bg-green-500 transition-all inline-block align-middle rounded-full w-10 h-6 mr-1">
+                      <div class="bg-white rounded-full w-4 h-4 m-1 ml-5"></div>
+                    </div>
+                    <div @click="enableShare(share);" v-if="share.enabled === false" title="Enable share"
+                      class="bg-gray-200 dark:bg-neutral-400 cursor-pointer hover:bg-gray-300 dark:hover:bg-neutral-500 transition-all inline-block align-middle rounded-full w-10 h-6 mr-1">
+                      <div class="bg-white rounded-full w-4 h-4 m-1"></div>
+                    </div>
+
+                    <!-- Edit -->
+                    <button title="Edit" @click="openSharePopUp(share);"
+                      class="bg-gray-100 dark:bg-neutral-600 text-gray-400 dark:text-neutral-300 hover:bg-gray-200 dark:hover:bg-neutral-500 hover:text-neutral-400 dark:hover:text-white align-middle p-2 rounded transition">
+                      <i class="fa-solid fa-pencil fa-fw"></i>
+                    </button>
+
+                    <!-- Delete -->
+                    <button
+                      class="bg-gray-100 dark:bg-neutral-600 text-gray-400 dark:text-neutral-300 hover:bg-gray-200 dark:hover:bg-neutral-500 hover:text-neutral-400 dark:hover:text-white align-middle p-2 rounded transition"
+                      title="Delete share" @click="openShareDeletePopUp(share);">
+                      <i class="fa-solid fa-trash fa-fw"></i>
+                    </button>
+                  </div>
+                </div>
+
+              </div>
+
+            </div>
+
+            <!-- No Shares -->
+            <div v-if="shares && shares.length === 0">
+              <p class="text-gray-400 dark:text-neutral-400 text-center m-10 text-sm">
+                There are no shares yet.<br /><br />
+                <button @click="openSharePopUp();"
+                  class="bg-violet-800 hover:bg-violet-700 text-white border-2 border-none py-2 px-4 rounded inline-flex items-center transition">
+                  <i class="fa-solid fa-plus w-4 mr-2"></i>
+                  <span class="text-sm">New Share</span>
+                </button>
+              </p>
+            </div>
+
+            <div v-if="shares === null" class="text-violet-500 pt-24 pb-12 flex">
+              <i class="fa-duotone fa-spinner animate-spin mx-auto"></i>
+            </div>
+          </div>
+        </div>
+
+        <!-- Share Create PopUp -->
+        <div v-if="sharePopUp" class="fixed z-10 inset-0 overflow-y-auto">
+          <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div class="fixed inset-0 transition-opacity" aria-hidden="true">
+              <div class="absolute inset-0 bg-gray-500 dark:bg-black opacity-75 dark:opacity-50"></div>
+            </div>
+
+            <!-- This element is to trick the browser into centering the modal contents. -->
+            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            <div
+              class="bg-white dark:bg-neutral-700 inline-block align-bottom rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg w-full"
+              role="dialog" aria-modal="true" aria-labelledby="modal-headline">
+              <div class="bg-white dark:bg-neutral-700 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div class="sm:flex sm:items-start">
+                  <!-- Icon -->
+                  <div
+                    class="bg-violet-800 mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full sm:mx-0 sm:h-10 sm:w-10">
+                    <i class="text-white fa-solid fa-plus"></i>
+                  </div>
+
+                  <div class="flex-grow mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+                    <!-- Title -->
+                    <h3 class="text-gray-900 dark:text-neutral-200 text-lg leading-6 font-medium" id="modal-headline">
+                      {{sharePopUp.edit ? 'Edit' : 'New'}} Share
+                    </h3>
+
+                    <!-- Input Box - Name -->
+                    <div class="mt-2">
+                      <p class="text-gray-500 text-sm">
+                        <input
+                          class="dark:bg-neutral-700 dark:text-neutral-200 border-gray-100 dark:border-neutral-600 focus:border-gray-200 focus:dark:border-neutral-500 dark:placeholder:text-neutral-400 rounded p-2 border-2 outline-none w-full"
+                          type="text" v-model.trim="sharePopUp.name" placeholder="Name" />
+                      </p>
+                    </div>
+
+                    <!-- Input Box - Path -->
+                    <div class="mt-2">
+                      <p class="text-gray-500 text-sm">
+                        <input
+                          class="dark:bg-neutral-700 dark:text-neutral-200 border-gray-100 dark:border-neutral-600 focus:border-gray-200 focus:dark:border-neutral-500 dark:placeholder:text-neutral-400 rounded p-2 border-2 outline-none w-full"
+                          type="text" v-model.trim="sharePopUp.path" placeholder="Path" />
+                      </p>
+                    </div>
+                    
+                    <!-- Toggles -->
+                    <div class="mt-2 grid grid-cols-3">
+                      <!-- Toggle - Browsable -->
+                      <label class="relative inline-flex items-center mb-5 cursor-pointer">
+                        <input type="checkbox" value="" class="sr-only peer" v-model="sharePopUp.toggleBrowsable">
+                        <div class="bg-gray-200 dark:bg-neutral-400 dark:border-gray-600 peer-checked:bg-green-600 after:bg-white after:border-gray-300 w-9 h-5 peer-focus:ring-4 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:border after:rounded-full after:h-4 after:w-4 after:transition-all"></div>
+                        <span class="text-gray-900 dark:text-gray-300 ml-3 text-sm font-medium">Browsable</span>
+                      </label>
+                      
+                      <!-- Toggle - Read Only -->
+                      <label class="relative inline-flex items-center mb-5 cursor-pointer">
+                        <input type="checkbox" value="" class="sr-only peer" v-model="sharePopUp.toggleReadOnly">
+                        <div class="bg-gray-200 dark:bg-neutral-400 dark:border-gray-600 peer-checked:bg-green-600 after:bg-white after:border-gray-300 w-9 h-5 peer-focus:ring-4 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:border after:rounded-full after:h-4 after:w-4 after:transition-all"></div>
+                        <span class="text-gray-900 dark:text-gray-300 ml-3 text-sm font-medium">Read Only</span>
+                      </label>
+                      
+                      <!-- Toggle - Guests -->
+                      <label class="relative inline-flex items-center mb-5 cursor-pointer">
+                        <input type="checkbox" value="" class="sr-only peer" v-model="sharePopUp.toggleGuests">
+                        <div class="bg-gray-200 dark:bg-neutral-400 dark:border-gray-600 peer-checked:bg-green-600 after:bg-white after:border-gray-300 w-9 h-5 peer-focus:ring-4 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:border after:rounded-full after:h-4 after:w-4 after:transition-all"></div>
+                        <span class="text-gray-900 dark:text-gray-300 ml-3 text-sm font-medium">Guests</span>
+                      </label>
+                      
+                      <!-- Toggle - Veto -->
+                      <label class="relative inline-flex items-center mb-5 cursor-pointer">
+                        <input type="checkbox" value="" class="sr-only peer" v-model="sharePopUp.toggleVeto">
+                        <div class="bg-gray-200 dark:bg-neutral-400 dark:border-gray-600 peer-checked:bg-green-600 after:bg-white after:border-gray-300 w-9 h-5 peer-focus:ring-4 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:border after:rounded-full after:h-4 after:w-4 after:transition-all"></div>
+                        <span class="text-gray-900 dark:text-gray-300 ml-3 text-sm font-medium">Veto</span>
+                      </label>
+                      
+                      <!-- Toggle - Recycle -->
+                      <label class="relative inline-flex items-center mb-5 cursor-pointer">
+                        <input type="checkbox" value="" class="sr-only peer" v-model="sharePopUp.toggleRecycle">
+                        <div class="bg-gray-200 dark:bg-neutral-400 dark:border-gray-600 peer-checked:bg-green-600 after:bg-white after:border-gray-300 w-9 h-5 peer-focus:ring-4 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:border after:rounded-full after:h-4 after:w-4 after:transition-all"></div>
+                        <span class="text-gray-900 dark:text-gray-300 ml-3 text-sm font-medium">Recycle</span>
+                      </label>
+                    </div>
+
+                    
+                    <h3 class="text-gray-900 dark:text-neutral-200 text-lg leading-6 font-medium" id="modal-headline">
+                      Advanced
+                    </h3>
+                    <!-- Input Box - Advanced -->
+                    <div class="mt-2">
+                      <p class="text-gray-500 text-sm">
+                        <textarea rows="4" v-model.trim="sharePopUp.advanced" 
+                          placeholder="# Enter your custom Samba configuration here at your own risk!"
+                          class="dark:bg-neutral-700 dark:text-neutral-200 border-gray-100 dark:border-neutral-600 focus:border-gray-200 focus:dark:border-neutral-500 dark:placeholder:text-neutral-40 rounded p-2 outline-none w-full border-2">
+                        </textarea>
+                      </p>
+                    </div>
+
+                    <p class="text-red-500 dark:text-red-300 font-bold text-sm mb-5" v-html="sharePopUp.error"></p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Buttons -->
+              <div class="bg-gray-50 dark:bg-neutral-700 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <!-- Create (if requirements met) -->
+                <button v-if="sharePopUp.name?.length && sharePopUp.path?.length" type="button"
+                  @click="[sharePopUp.edit ? editShare(sharePopUp) : createShare(sharePopUp)]"
+                  class="bg-violet-800 text-white hover:bg-violet-700 w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 text-base font-medium focus:outline-none sm:ml-3 sm:w-auto sm:text-sm">
+                  {{sharePopUp.edit ? 'Edit' : 'Create'}}
+                </button>
+
+                <!-- Create -->
+                <button v-else type="button"
+                  class="bg-gray-200 dark:bg-neutral-400 text-white dark:text-neutral-300 w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 text-base font-medium sm:ml-3 sm:w-auto sm:text-sm cursor-not-allowed">
+                  {{sharePopUp.edit ? 'Edit' : 'Create'}}
+                </button>
+
+                <!-- Cancel -->
+                <button type="button" @click="closeSharePopUp();"
+                  class="bg-white dark:bg-neutral-500 text-gray-700 dark:text-neutral-50 hover:bg-gray-50 dark:hover:bg-neutral-600 dark:hover:border-neutral-600 border-gray-300 dark:border-neutral-500 mt-3 w-full inline-flex justify-center rounded-md bordershadow-sm px-4 py-2 text-base font-medium focus:outline-none sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Client Create Pop-Up -->
+        <div v-if="clientPopUp" class="fixed z-10 inset-0 overflow-y-auto">
+          <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div class="fixed inset-0 transition-opacity" aria-hidden="true">
+              <div class="bg-gray-500 dark:bg-black opacity-75 dark:opacity-50 absolute inset-0"></div>
+            </div>
+
+            <!-- This element is to trick the browser into centering the modal contents. -->
+            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            <div
+              class="bg-white dark:bg-neutral-700 inline-block align-bottom rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg w-full"
+              role="dialog" aria-modal="true" aria-labelledby="modal-headline">
+              <div class="bg-white dark:bg-neutral-700 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div class="sm:flex sm:items-start">
+                  <!-- Icon -->
+                  <div
+                    class="bg-violet-800 mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full sm:mx-0 sm:h-10 sm:w-10">
+                    <i class="text-white fa-solid fa-plus"></i>
+                  </div>
+
+                  <div class="flex-grow mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+                    <!-- Title -->
+                    <h3 class="text-gray-900 dark:text-neutral-200 text-lg leading-6 font-medium" id="modal-headline">
+                      {{clientPopUp.edit ? 'Edit' : 'New'}} Client
+                    </h3>
+
+                    <!-- Input Box - Name -->
+                    <div class="mt-2" v-if="!clientPopUp.edit">
+                      <p class="text-gray-500 text-sm">
+                        <input
+                          class="dark:bg-neutral-700 dark:text-neutral-200 border-gray-100 dark:border-neutral-600 focus:border-gray-200 focus:dark:border-neutral-500 dark:placeholder:text-neutral-400 rounded p-2 border-2 outline-none w-full"
+                          type="text" v-model.trim="clientPopUp.name" placeholder="Name" />
+                      </p>
+                    </div>
+
+                    <!-- Input Box - Password -->
+                    <div class="mt-2">
+                      <p class="text-gray-500 text-sm">
+                        <input
+                          class="dark:bg-neutral-700 dark:text-neutral-200 border-gray-100 dark:border-neutral-600 focus:border-gray-200 focus:dark:border-neutral-500 dark:placeholder:text-neutral-400 rounded p-2 border-2 outline-none w-full"
+                          type="password" v-model.trim="clientPopUp.password" placeholder="Password" />
+                      </p>
+                    </div>
+
+                    <p class="text-red-500 dark:text-red-300 font-bold text-sm mb-5" v-html="clientPopUp.error"></p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Buttons -->
+              <div class="bg-gray-50 dark:bg-neutral-700 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <!-- Create (if requirements met) -->
+                <button v-if="clientPopUp.name?.length && clientPopUp.password?.length" type="button"
+                  @click="[clientPopUp.edit ? editClient(clientPopUp) : createClient(clientPopUp)]"
+                  class=" bg-violet-800 text-white hover:bg-violet-700 w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 text-base font-medium focus:outline-none sm:ml-3 sm:w-auto sm:text-sm">
+                  {{clientPopUp.edit ? 'Edit' : 'Create'}}
+                </button>
+
+                <!-- Create -->
+                <button v-else type="button"
+                  class="bg-gray-200 dark:bg-neutral-400 text-white dark:text-neutral-300 w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 text-base font-medium sm:ml-3 sm:w-auto sm:text-sm cursor-not-allowed">
+                  {{clientPopUp.edit ? 'Edit' : 'Create'}}
+                </button>
+
+                <!-- Cancel -->
+                <button type="button" @click="closeClientPopUp();"
+                  class="bg-white dark:bg-neutral-500 text-gray-700 dark:text-neutral-50 hover:bg-gray-50 dark:hover:bg-neutral-600 dark:hover:border-neutral-600 border-gray-300 dark:border-neutral-500 mt-3 w-full inline-flex justify-center rounded-md border shadow-sm px-4 py-2 text-base font-medium focus:outline-none sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Delete PopUp -->
+        <div v-if="deletePopUp" class="fixed z-10 inset-0 overflow-y-auto">
+          <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div class="fixed inset-0 transition-opacity" aria-hidden="true">
+              <div class="bg-gray-500 dark:bg-black opacity-75 dark:opacity-50 absolute inset-0"></div>
+            </div>
+
+            <!-- This element is to trick the browser into centering the modal contents. -->
+            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            <div
+              class="bg-white dark:bg-neutral-700 inline-block align-bottom rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg w-full"
+              role="dialog" aria-modal="true" aria-labelledby="modal-headline">
+              <div class="bg-white dark:bg-neutral-700 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div class="sm:flex sm:items-start">
+                  <!-- Icon -->
+                  <div
+                    class="bg-violet-100 mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full sm:mx-0 sm:h-10 sm:w-10">
+                    <i class="text-violet-600 fa-regular fa-triangle-exclamation"></i>
+                  </div>
+
+                  <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+                    <!-- Title -->
+                    <h3 class="text-gray-900 dark:text-neutral-200 text-lg leading-6 font-medium" id="modal-headline">
+                      Delete {{deletePopUp.title}}
+                    </h3>
+
+                    <div class="mt-2">
+                      <!-- Text -->
+                      <p class="text-gray-500 dark:text-neutral-300 text-sm">
+                        Are you sure you want to delete <strong>{{deletePopUp.name}}</strong>?
+                        This action cannot be undone.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Buttons -->
+              <div class="bg-gray-50 dark:bg-neutral-700 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <!-- Delete -->
+                <button type="button" @click="[deletePopUp.type == 'client' ? deleteClient(deletePopUp) : deleteShare(deletePopUp)]"
+                  class="bg-violet-600 dark:bg-violet-100 text-white dark:text-violet-600 hover:bg-violet-700 dark:hover:bg-violet-200 w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 text-base font-medium focus:outline-none sm:ml-3 sm:w-auto sm:text-sm">
+                  Delete
+                </button>
+
+                <!-- Cancel -->
+                <button type="button" @click="closeDeletePopUp();"
+                  class="bg-white dark:bg-neutral-500 text-gray-700 dark:text-neutral-50 hover:bg-gray-50 dark:hover:bg-neutral-600 dark:hover:border-neutral-600 border-gray-300 dark:border-neutral-500 mt-3 w-full inline-flex justify-center rounded-md border shadow-sm px-4 py-2 text-base font-medium focus:outline-none sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div v-if="authentication.authenticated === false">
+        <h1 class="text-gray-700 dark:text-neutral-200 text-4xl font-medium my-16 text-center">Samba</h1>
+
+        <form @submit="login"
+          class="bg-white dark:bg-neutral-700 shadow rounded-md mx-auto w-64 p-5 overflow-hidden mt-10">
+
+          <!-- Avatar -->
+          <div
+            class="bg-violet-800 dark:bg-violet-100 h-20 w-20 mb-10 mt-5 mx-auto rounded-full flex justify-center items-center overflow-hidden">
+            <i class="text-white dark:text-violet-600 fa-solid fa-user fa-2x"></i>
+          </div>
+
+          <!-- Input Box - Password -->
+          <input type="password" name="password" placeholder="Password" v-model="loginPage.password"
+            class="dark:bg-neutral-700 text-gray-500 dark:text-neutral-200 border-2 border-gray-100 dark:border-neutral-600 focus:border-violet-800 dark:focus:border-neutral-500 dark:placeholder:text-neutral-400 px-3 py-2 text-sm rounded-lg w-full outline-none" />
+          <p class="text-red-500 dark:text-red-300 font-bold text-sm mb-5" v-html="loginPage.error"></p>
+
+          <!-- Spinner -->
+          <button v-if="authentication.authenticating"
+            class="bg-violet-800 text-white  w-full rounded shadow py-2 text-sm cursor-not-allowed flex">
+            <i class="fa-duotone fa-spinner animate-spin mx-auto"></i>
+          </button>
+
+          <!-- Button - (requirements met) -->
+          <input v-if="!authentication.authenticating && loginPage.password" type="submit"
+            class="bg-violet-800 text-white hover:bg-violet-700 w-full rounded shadow py-2 text-sm transition cursor-pointer"
+            value="Sign In">
+
+          <!-- Button - (requirements not met) -->
+          <input v-if="!authentication.authenticating && !loginPage.password" type="submit"
+            class="bg-gray-200 dark:bg-neutral-400 text-white dark:text-neutral-300 w-full rounded shadow py-2 text-sm cursor-not-allowed"
+            value="Sign In">
+        </form>
+      </div>
+
+      <!-- Spinner -->
+      <div v-if="authentication.authenticated === null" class="text-violet-500 pt-24 pb-12 flex">
+        <i class="fa-duotone fa-spinner animate-spin mx-auto"></i>
+      </div>
+    </div>
+
+    <p v-cloak class="text-gray-500 dark:text-neutral-600 text-xs text-center m-10">
+      Made by <a target="_blank" class="hover:underline" href="https://github.com/goodbyepavlyi">goodbyepavlyi</a>
+      ·
+      <a class="hover:underline" href="https://github.com/goodbyepavlyi/samba-easy" target="_blank">GitHub</a>
+      ·
+      <a class="hover:underline" href="https://github.com/weejewel/wg-easy" target="_blank">Theme</a>
+    </p>
+
+  </div>
+
+  <script src="./js/vendor/vue.min.js"></script>
+  <script src="./js/vendor/apexcharts.min.js"></script>
+  <script src="./js/vendor/vue-apexcharts.min.js"></script>
+  <script src="./js/vendor/md5.min.js"></script>
+  <script src="./js/vendor/timeago.min.js"></script>
+  <script src="./js/api.js"></script>
+  <script src="./js/app.js"></script>
+</body>
+
+</html>

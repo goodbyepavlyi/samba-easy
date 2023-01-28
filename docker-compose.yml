@@ -1,0 +1,23 @@
+version: "3.8"
+services:
+  samba-easy:
+    environment:
+      # Optional:
+      # - PASSWORD=password
+      # - PORT=7456
+      # - SB_WORKGROUP=WORKGROUP
+      # - SB_SERVER_NAME=Samba
+      # - SB_FOLLOW_SYMLINKS=yes
+      # - SB_LOG_LEVEL=0
+      # - SB_WIDE_LINKS=yes
+      # - SB_HOSTS_ALLOW='127.0.0.0/8 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16'
+      # - SB_INTERFACES=eth0
+    image: goodbyepavlyi/samba-easy
+    container_name: samba-easy
+    volumes:
+      - .:/config
+    ports:
+      - "139:139"
+      - "445:445"
+      - "7456:7456"
+    restart: unless-stopped
