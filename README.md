@@ -1,7 +1,6 @@
 # Samba Easy
 
-[![Build & Publish Docker Image to Docker Hub](https://github.com/goodbyepavlyi/samba-easy/actions/workflows/deploy.yml/badge.svg?branch=production)](https://github.com/goodbyepavlyi/samba-easy/actions/workflows/deploy.yml)
-[![Lint](https://github.com/goodbyepavlyi/samba-easy/actions/workflows/lint.yml/badge.svg?branch=master)](https://github.com/goodbyepavlyi/samba-easy/actions/workflows/lint.yml)
+[![Build & Publish Docker Image to Docker Hub](https://github.com/goodbyepavlyi/samba-easy/actions/workflows/docker-image.yml/badge.svg?branch=production)](https://github.com/goodbyepavlyi/samba-easy/actions/workflows/docker-image.yml)
 [![Docker](https://img.shields.io/docker/v/goodbyepavlyi/samba-easy/latest)](https://hub.docker.com/r/goodbyepavlyi/samba-easy)
 [![Docker](https://img.shields.io/docker/pulls/goodbyepavlyi/samba-easy.svg)](https://hub.docker.com/r/goodbyepavlyi/samba-easy)
 ![GitHub Stars](https://img.shields.io/github/stars/goodbyepavlyi/samba-easy)
