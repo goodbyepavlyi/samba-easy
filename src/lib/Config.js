@@ -1,8 +1,6 @@
 const fs = require('node:fs');
 const path = require('node:path');
 
-const debug = require('debug')('Config');
-
 module.exports = class Config {
     // ############
     // #  Config  #
@@ -11,21 +9,21 @@ module.exports = class Config {
         if (this.config) 
             return this.config;
         
-        debug('Loading configuration...');
+        console.log('(Config) Loading configuration...');
 
         let config;
         try {
             config = fs.readFileSync(path.join('/config', 'config.json'), 'utf8');
             config = JSON.parse(config);
             
-            debug('Configuration loaded!');
+            console.log('(Config) Configuration loaded!');
         } catch (error) {
             config = {
                 shares: {},
                 clients: {},
             };
             
-            debug('Default configuration generated.');
+            console.log('(Config) Default configuration generated.');
         }
 
         this.__saveConfig(config);
@@ -39,10 +37,10 @@ module.exports = class Config {
     }
 
     async __saveConfig(config) {
-        debug('Saving configuration...');
+        console.log('(Config) Saving configuration...');
 
         fs.writeFileSync(path.join('/config', 'config.json'), JSON.stringify(config, false, 2), { mode: 0o660, });
 
-        debug('Configuration saved!');
+        console.log('(Config) Configuration saved!');
     }
 }

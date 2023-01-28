@@ -2,7 +2,6 @@ const path = require('path');
 
 const express = require('express');
 const expressSession = require('express-session');
-const debug = require('debug')('Server');
 
 const { PORT, RELEASE, PASSWORD } = require('../config');
 const ServerError = require('./ServerError');
@@ -56,14 +55,14 @@ module.exports = class Server {
                 req.session.authenticated = true;
                 req.session.save();
 
-                debug(`New Session: ${req.session.id}`);
+                console.log(`(Server) New Session: ${req.session.id}`);
             }))
             .delete('/api/session', this.respond(async req => {
                 const sessionId = req.session.id;
 
                 req.session.destroy();
 
-                debug(`Deleted Session: ${sessionId}`);
+                console.log(`(Server) Deleted Session: ${sessionId}`);
             }))
             .use((req, res, next) => {
                 if (!PASSWORD) return next();
@@ -142,7 +141,7 @@ module.exports = class Server {
             }))
 
             .listen(PORT, () => {
-                debug(`Listening on http://0.0.0.0:${PORT}`);
+                console.log(`(Server) Listening on http://0.0.0.0:${PORT}`);
             });
     }
 

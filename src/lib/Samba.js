@@ -1,8 +1,6 @@
 const fs = require('fs');
 const path = require('path');
 
-const debug = require('debug')('Samba');
-
 const Config = require('./Config');
 const Util = require('./Util');
 
@@ -135,10 +133,10 @@ ${SB_INTERFACES ? `interfaces = ${SB_INTERFACES}\nbind interfaces only = yes` : 
             await Util.exec(`echo -e "${client.password}\\n${client.password}" | smbpasswd -a -s "${client.name}"`);
         }
 
-        debug('Config saving...');
+        console.log('(Samba) Config saving...');
 
         fs.writeFileSync(path.join('/etc/samba', 'smb.conf'), samba, { mode: 0o600, });
 
-        debug('Config saved.');
+        console.log('(Samba) Config saved.');
     }
 };
