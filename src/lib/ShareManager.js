@@ -74,6 +74,7 @@ guest ok = ${share.toggleGuests ? 'yes' : 'no'}`;
         
         if (share.toggleVeto) config += `\nvfs objects = recycle\nrecycle:repository = .recycle\nrecycle:keeptree = yes\nrecycle:versions = yes`;
         if (share.toggleRecycle) config += `\nveto files = /._*/.apdisk/.AppleDouble/.DS_Store/.TemporaryItems/.Trashes/desktop.ini/ehthumbs.db/Network Trash Folder/Temporary Items/Thumbs.db/\ndelete veto files = yes`;
+        if (share.advanced) config += advanced;
 
         return config;
     }
