@@ -1,25 +1,38 @@
-name: Docker Image CI
+name: Build & Publish Docker Image to Docker Hub
 
 on:
   push:
     branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
 
 jobs:
-
-  build:
-
+  deploy:
+    name: Build & Deploy
     runs-on: ubuntu-latest
-
+    
     steps:
     - uses: actions/checkout@v3
+      with:
+        ref: master
+
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v1
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v1
+
     - name: Login to DockerHub
-      env:
-        DOCKER_USER: ${{secrets.DOCKER_USER}}
-        DOCKER_PASSWORD: ${{secrets.DOCKER_PASSWORD}}
-      run: docker login -u $DOCKER_USER -p $DOCKER_PASSWORD
-    - name: Build the Docker image
-      run: docker build . --file Dockerfile --tag goodbyepavlyi/samba-easy:$(date +%s)
-    - name: Push the Docker image
-      run: docker push ${{secrets.DOCKER_USER}}/samba-easy
+      uses: docker/login-action@v1 
+      with:
+        username: ${{secrets.DOCKER_USER}}
+        password: ${{secrets.DOCKER_PASSWORD}}
+
+    # Set environment variables
+    - run: echo RELEASE=$(cat ./src/package.json | jq -r .release) >> $GITHUB_ENV
+
+    # Build & Publish
+    - name: Build & Publish Docker Image
+      uses: docker/build-push-action@v2
+      with:
+        push: true
+        platforms: linux/amd64,linux/arm/v6,linux/arm/v7,linux/arm64/v8
+        tags: goodbyepavlyi/samba-easy:latest, goodbyepavlyi/samba-easy:${{ env.RELEASE }}
