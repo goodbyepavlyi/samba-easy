@@ -1,3 +1,5 @@
+## ⚠ This project has reached its end of life, and is now just preserved here for posterity.
+
 # Samba Easy
 
 [![Build & Publish Docker Image to Docker Hub](https://github.com/goodbyepavlyi/samba-easy/actions/workflows/docker-image.yml/badge.svg?branch=production)](https://github.com/goodbyepavlyi/samba-easy/actions/workflows/docker-image.yml)
